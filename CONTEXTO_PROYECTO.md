@@ -90,30 +90,66 @@ IA_P2/
 | Componente | Tecnología |
 |---|---|
 | Lenguaje | Python 3.10+ |
-| Computer Vision | OpenCV, MediaPipe |
-| Machine Learning | scikit-learn |
-| Algoritmos a probar | KNN, SVM, Random Forest, Logistic Regression |
-| Interfaz gráfica | Tkinter o PyQt5 (a decidir por el equipo) |
-| Mensajería | python-telegram-bot o requests a Telegram API |
+| Computer Vision | OpenCV 4.9.0, MediaPipe 0.10.9 |
+| Machine Learning | scikit-learn 1.4.2 |
+| Algoritmos probados | KNN, SVM ✅, Random Forest, Logistic Regression |
+| Interfaz gráfica | **Tkinter** (se eligió porque PyQt5 tiene problemas en Wayland) |
+| Mensajería | python-telegram-bot 20.8 |
 | Despliegue | Docker + docker-compose |
-| Gestión de entorno | venv o virtualenv |
+| Gestión de entorno | sistema (sin venv — instalación con pip --user) |
+
+### Notas críticas de instalación
+- **NO usar mediapipe >= 0.10.10** — arrastra `torch` + `triton` + nvidia drivers (>700MB). Usar `mediapipe==0.10.9`
+- **Tkinter** no se instala con pip: `sudo apt install python3-tk`
+- **El sistema usa Wayland** (Ubuntu 22.04). `cv2.imshow` NO funciona en Wayland. Toda UI debe usar **Tkinter**
+- La webcam es `USB2.0 VGA UVC WebCam` en `/dev/video0` y `/dev/video1` (par, usar device_id=0)
+- Para mostrar video en Tkinter: convertir frame BGR→RGB → `PIL.Image` → `ImageTk.PhotoImage`
 
 ---
 
-## Dataset
-- El dataset lo crea el equipo (no se puede usar uno externo sin justificación)
-- Organizado por carpetas, una por seña/clase
-- Se recomiendan varias condiciones: iluminación, posición, usuarios distintos
-- Features: landmarks normalizados de MediaPipe (21 puntos × 3 coordenadas = 63 valores)
-- El script de recolección debe guardar las features en CSV
+## Dataset ✅ COMPLETADO
+- **Archivo:** `data/processed/dataset.csv`
+- **Total muestras:** 1246
+- **Script de recolección:** `data/collect_data.py` (usa Tkinter para display)
+- **Features:** 63 columnas (21 landmarks × x, y, z) + columna `label`
+- **Clases y muestras:**
+
+| Seña | Muestras |
+|---|---|
+| agua | 129 |
+| ayuda | 117 |
+| bye | 122 |
+| casa | 118 |
+| gracias | 116 |
+| hola | 109 |
+| mama | 172 |
+| no | 138 |
+| papa | 117 |
+| si | 108 |
+
+> El dataset NO se versiona en git (está en .gitignore). Cada integrante debe tenerlo localmente.
 
 ---
 
-## Modelo de Machine Learning
-- Entrenado con scikit-learn
-- Persistido como `model.pkl` (joblib o pickle)
-- Métricas requeridas: accuracy, precision, recall, F1, matriz de confusión
-- Se deben probar al menos 2 algoritmos y justificar el elegido
+## Modelo de Machine Learning ✅ COMPLETADO
+- **Script:** `model/train.py`
+- **Modelo elegido:** SVM (kernel=rbf, C=10, gamma=scale)
+- **Archivos generados** (en .gitignore, no se suben al repo):
+  - `model/model.pkl` — modelo entrenado
+  - `model/scaler.pkl` — StandardScaler
+  - `model/label_encoder.pkl` — LabelEncoder
+  - `model/results/` — matrices de confusión + gráfica comparativa
+
+### Resultados de evaluación
+| Algoritmo | Test Accuracy | CV 5-fold |
+|---|---|---|
+| **SVM** ✅ | **100%** | 98.59% ± 0.38% |
+| Random Forest | 100% | 99.00% ± 0.32% |
+| KNN | 98.80% | 98.09% ± 0.67% |
+| Logistic Regression | 98.40% | 98.39% ± 0.97% |
+
+> El SVM ganó por criterio de test accuracy. El modelo carga con `joblib.load('model/model.pkl')`.
+> Para predecir: escalar con `scaler.pkl` → predecir → decodificar con `label_encoder.pkl`
 
 ---
 
@@ -149,15 +185,26 @@ IA_P2/
 ## Estado Actual del Proyecto (10/04/2026)
 - [x] Repositorio creado en GitHub
 - [x] Colaboradores agregados (JosueC23, roberto1206, ixchop98)
-- [ ] Estructura de carpetas del proyecto
-- [ ] Script de recolección de dataset
-- [ ] Extracción de features con MediaPipe
-- [ ] Entrenamiento del modelo
-- [ ] Interfaz gráfica
-- [ ] Bot de Telegram
-- [ ] Módulo administrativo
-- [ ] Docker
-- [ ] Manuales
+- [x] Estructura de carpetas del proyecto
+- [x] `requirements.txt` con versiones fijadas
+- [x] `config.json` con configuración central
+- [x] Script de recolección de dataset (`data/collect_data.py`)
+- [x] Dataset recolectado — 1246 muestras, 10 clases
+- [x] Script de entrenamiento (`model/train.py`) con 4 algoritmos
+- [x] Modelo entrenado y guardado — SVM 100% accuracy
+- [ ] **Interfaz principal `app.py`** ← SIGUIENTE PASO
+- [ ] Bot de Telegram (`src/telegram_bot.py`)
+- [ ] Módulo administrativo (`src/admin_panel.py`)
+- [ ] Docker (`Dockerfile` + `docker-compose.yml`)
+- [ ] Manuales (técnico + usuario)
+
+## Próximo paso
+Crear `app.py` — interfaz principal con Tkinter que:
+1. Muestra el video en tiempo real
+2. Carga `model.pkl`, `scaler.pkl`, `label_encoder.pkl`
+3. Predice la seña en cada frame
+4. Muestra la predicción + nivel de confianza
+5. Tiene botón "Enviar a Telegram"
 
 ---
 
