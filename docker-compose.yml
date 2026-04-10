@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  handtalk:
+    build: .
+    container_name: handtalk_ai
+    environment:
+      - DISPLAY=${DISPLAY}
+      - QT_X11_NO_MITSHM=1
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - ${HOME}/.Xauthority:/root/.Xauthority:rw
+      - ./data:/app/data
+      - ./model:/app/model
+      - ./config.json:/app/config.json
+    devices:
+      - /dev/video0:/dev/video0
+      - /dev/video1:/dev/video1
+    privileged: true
+    network_mode: host
+    stdin_open: true
+    tty: true

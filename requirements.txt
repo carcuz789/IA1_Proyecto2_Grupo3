@@ -1,6 +1,5 @@
 opencv-python==4.9.0.80
-# mediapipe 0.10.9 — NO usar 0.10.10+ porque arrastra torch/triton (>700MB)
-mediapipe==0.10.9
+mediapipe==0.10.33
 attrs>=19.1.0
 absl-py>=0.10.0
 flatbuffers>=2.0
