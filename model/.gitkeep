@@ -1,0 +1,4 @@
+# Modelo entrenado — generado por model/train.py
+*.pkl
+# Resultados de evaluación
+results/

@@ -1,0 +1,17 @@
+{
+  "telegram": {
+    "token": "YOUR_BOT_TOKEN_HERE",
+    "chat_id": "YOUR_CHAT_ID_HERE",
+    "enabled": true,
+    "message_format": "✋ Seña detectada: {sign} (confianza: {confidence:.1%})"
+  },
+  "model": {
+    "path": "model/model.pkl",
+    "confidence_threshold": 0.75
+  },
+  "signs": ["hola", "gracias", "si", "no", "ayuda", "agua", "casa", "bye", "papa", "mama"],
+  "camera": {
+    "device_id": 0
+  },
+  "history_enabled": true
+}

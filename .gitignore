@@ -1,0 +1,31 @@
+# Entorno virtual
+venv/
+.venv/
+env/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+
+# Modelo y datos sensibles
+model/model.pkl
+model/scaler.pkl
+model/label_encoder.pkl
+model/results/
+data/processed/dataset.csv
+
+# Configuración con tokens
+# (config.json se versiona SIN el token real)
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
