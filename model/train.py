@@ -95,7 +95,8 @@ def train_and_evaluate(X_train, X_test, y_train, y_test, label_names):
 
 
 def save_confusion_matrix(y_test, y_pred, labels, algo_name):
-    cm = confusion_matrix(y_test, y_pred, labels=labels)
+    label_indices = list(range(len(labels)))
+    cm = confusion_matrix(y_test, y_pred, labels=label_indices)
     fig, ax = plt.subplots(figsize=(10, 8))
     disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=labels)
     disp.plot(ax=ax, colorbar=True, xticks_rotation=45)

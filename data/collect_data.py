@@ -2,6 +2,7 @@
 Script de recolección de datos para HandTalk AI.
 
 Captura landmarks de la mano con MediaPipe y los guarda en CSV.
+Usa Tkinter para el display (compatible con Wayland y X11).
 
 Uso:
     python data/collect_data.py
@@ -16,6 +17,8 @@ import csv
 import json
 import os
 import sys
+import tkinter as tk
+from PIL import Image, ImageTk
 
 import cv2
 import mediapipe as mp
@@ -73,93 +76,154 @@ def main():
         writer.writerow(build_header())
 
     counts = load_counts()
+
     cap = cv2.VideoCapture(config["camera"]["device_id"])
     if not cap.isOpened():
         print("ERROR: No se pudo abrir la cámara.")
         sys.exit(1)
 
-    current_idx = 0
-    session_total = 0
-    status_msg = "Listo — coloca tu mano frente a la cámara"
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+    cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
 
+    print("Iniciando cámara, espera un momento...")
+    for _ in range(60):
+        cap.read()
+
+    # ── Tkinter window ────────────────────────────────────────────────────────
+    root = tk.Tk()
+    root.title("HandTalk AI — Recoleccion de datos")
+    root.resizable(False, False)
+
+    canvas = tk.Canvas(root, width=640, height=480, bg="black", highlightthickness=0)
+    canvas.pack()
+
+    # Panel de info debajo del canvas
+    info_frame = tk.Frame(root, bg="#1e1e1e")
+    info_frame.pack(fill=tk.X)
+
+    lbl_sign   = tk.Label(info_frame, text="", font=("Courier", 14, "bold"),
+                          fg="#00ff00", bg="#1e1e1e", anchor="w", padx=8)
+    lbl_sign.pack(fill=tk.X)
+
+    lbl_counts = tk.Label(info_frame, text="", font=("Courier", 11),
+                          fg="#ffff00", bg="#1e1e1e", anchor="w", padx=8)
+    lbl_counts.pack(fill=tk.X)
+
+    lbl_status = tk.Label(info_frame, text="", font=("Courier", 10),
+                          fg="#00d4ff", bg="#1e1e1e", anchor="w", padx=8)
+    lbl_status.pack(fill=tk.X)
+
+    lbl_keys   = tk.Label(info_frame,
+                          text="[ESPACIO] Capturar   [A] Anterior   [D] Siguiente   [Q] Salir",
+                          font=("Courier", 9), fg="#888888", bg="#1e1e1e", padx=8, pady=4)
+    lbl_keys.pack(fill=tk.X)
+
+    # Estado mutable compartido con los callbacks de teclado
+    state = {
+        "current_idx": 0,
+        "session_total": 0,
+        "status_msg": "Listo — coloca tu mano frente a la camara",
+        "running": True,
+    }
+
+    def on_key(event):
+        ch = event.keysym.lower()
+        if ch == "q":
+            state["running"] = False
+            root.quit()
+        elif ch == "d":
+            state["current_idx"] = (state["current_idx"] + 1) % len(SIGNS)
+            state["status_msg"] = f"-> Sena: {SIGNS[state['current_idx']]}"
+        elif ch == "a":
+            state["current_idx"] = (state["current_idx"] - 1) % len(SIGNS)
+            state["status_msg"] = f"<- Sena: {SIGNS[state['current_idx']]}"
+        elif ch == "space":
+            # La captura se maneja en el loop de video
+            state["capture_now"] = True
+
+    state["capture_now"] = False
+    root.bind("<KeyPress>", on_key)
+    root.focus_set()
+
+    # ── MediaPipe ─────────────────────────────────────────────────────────────
     with mp_hands.Hands(
         static_image_mode=False,
         max_num_hands=1,
         min_detection_confidence=0.7,
         min_tracking_confidence=0.5,
     ) as hands:
-        while cap.isOpened():
+
+        def update_frame():
+            if not state["running"]:
+                return
+
             ret, frame = cap.read()
             if not ret:
-                break
+                root.after(30, update_frame)
+                return
 
             frame = cv2.flip(frame, 1)
-            rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            rgb   = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             results = hands.process(rgb)
 
-            current_sign = SIGNS[current_idx]
+            current_sign  = SIGNS[state["current_idx"]]
             hand_detected = False
-            features = None
+            features      = None
 
-            # Dibujar landmarks si hay mano
             if results.multi_hand_landmarks:
                 for hand_lm in results.multi_hand_landmarks:
                     mp_drawing.draw_landmarks(
                         frame, hand_lm, mp_hands.HAND_CONNECTIONS
                     )
-                    features = extract_landmarks(hand_lm)
+                    features      = extract_landmarks(hand_lm)
                     hand_detected = True
 
-            # ── Panel de información ───────────────────────────────────────────
-            h, w = frame.shape[:2]
-            overlay = frame.copy()
-            cv2.rectangle(overlay, (0, 0), (w, 115), (0, 0, 0), -1)
-            cv2.addWeighted(overlay, 0.55, frame, 0.45, 0, frame)
-
-            cv2.putText(frame, f"Sena: [{current_idx + 1}/{len(SIGNS)}] {current_sign}",
-                        (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.85, (0, 255, 0), 2)
-            cv2.putText(frame,
-                        f"Muestras '{current_sign}': {counts[current_sign]}  |  Total sesion: {session_total}",
-                        (10, 62), cv2.FONT_HERSHEY_SIMPLEX, 0.62, (255, 255, 0), 2)
-            cv2.putText(frame, "[ESPACIO] Capturar   [A] Anterior   [D] Siguiente   [Q] Salir",
-                        (10, 94), cv2.FONT_HERSHEY_SIMPLEX, 0.48, (180, 180, 180), 1)
-
-            det_color = (0, 230, 0) if hand_detected else (0, 0, 220)
-            det_text = "Mano OK" if hand_detected else "Sin mano"
-            cv2.putText(frame, det_text, (w - 150, 30),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.7, det_color, 2)
-
-            cv2.putText(frame, status_msg, (10, h - 15),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.55, (0, 210, 255), 2)
-
-            cv2.imshow("HandTalk AI — Recoleccion de datos", frame)
-            key = cv2.waitKey(1) & 0xFF
-
-            if key == ord("q"):
-                break
-            elif key == ord("d"):
-                current_idx = (current_idx + 1) % len(SIGNS)
-                status_msg = f"-> Sena: {SIGNS[current_idx]}"
-            elif key == ord("a"):
-                current_idx = (current_idx - 1) % len(SIGNS)
-                status_msg = f"<- Sena: {SIGNS[current_idx]}"
-            elif key == ord(" "):
+            # Capturar si se presionó ESPACIO
+            if state["capture_now"]:
+                state["capture_now"] = False
                 if hand_detected and features:
                     writer.writerow(features + [current_sign])
                     counts[current_sign] += 1
-                    session_total += 1
-                    status_msg = (
+                    state["session_total"] += 1
+                    state["status_msg"] = (
                         f"✓ Muestra #{counts[current_sign]} guardada para '{current_sign}'"
                     )
                 else:
-                    status_msg = "✗ No se detecto mano — intenta de nuevo"
+                    state["status_msg"] = "✗ No se detecto mano — intenta de nuevo"
+
+            # Indicador de mano en el frame
+            det_color_bgr = (0, 230, 0) if hand_detected else (0, 0, 220)
+            det_text      = "Mano OK" if hand_detected else "Sin mano"
+            cv2.putText(frame, det_text, (frame.shape[1] - 150, 30),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.7, det_color_bgr, 2)
+
+            # Convertir a Tkinter
+            img = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+            imgtk = ImageTk.PhotoImage(image=img)
+            canvas.imgtk = imgtk  # evitar garbage collection
+            canvas.create_image(0, 0, anchor=tk.NW, image=imgtk)
+
+            # Actualizar labels
+            lbl_sign.config(
+                text=f"Sena [{state['current_idx']+1}/{len(SIGNS)}]: {current_sign}"
+            )
+            lbl_counts.config(
+                text=f"Muestras '{current_sign}': {counts[current_sign]}  |  "
+                     f"Total sesion: {state['session_total']}"
+            )
+            lbl_status.config(text=state["status_msg"])
+
+            root.after(30, update_frame)  # ~33 fps
+
+        update_frame()
+        root.mainloop()
 
     cap.release()
-    cv2.destroyAllWindows()
     csv_file.close()
 
     print(f"\n{'='*50}")
-    print(f"Sesion finalizada. Muestras capturadas: {session_total}")
+    print(f"Sesion finalizada. Muestras capturadas: {state['session_total']}")
     print(f"Dataset guardado en: {OUTPUT_CSV}")
     print(f"\nResumen total por clase:")
     for sign in SIGNS:
