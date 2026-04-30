@@ -7,9 +7,24 @@
   },
   "model": {
     "path": "model/model.pkl",
-    "confidence_threshold": 0.75
+    "confidence_threshold": 0.17482517482517482
   },
-  "signs": ["hola", "gracias", "si", "no", "ayuda", "agua", "casa", "bye", "papa", "mama"],
+  "signs": [
+    "agua",
+    "ayuda",
+    "bye",
+    "casa",
+    "dedo_medio",
+    "gracias",
+    "hola",
+    "mama",
+    "no",
+    "papa",
+    "paz",
+    "salvatrucha",
+    "si",
+    "te_quiero"
+  ],
   "camera": {
     "device_id": 0
   },

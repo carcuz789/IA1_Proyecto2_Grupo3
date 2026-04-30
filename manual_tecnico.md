@@ -28,7 +28,7 @@
 - Captura video de la cámara web en tiempo real
 - Detecta la mano del usuario utilizando **MediaPipe Hands**
 - Extrae 21 puntos de referencia (landmarks) de la mano
-- Clasifica la seña utilizando un modelo **SVM** entrenado
+- Clasifica la seña utilizando un modelo **Random Forest** entrenado
 - Muestra la predicción y nivel de confianza en una **interfaz gráfica Tkinter**
 - Permite enviar el resultado a un **bot de Telegram**
 
@@ -37,10 +37,10 @@
 | Aspecto | Detalles |
 |---|---|
 | **Lenguaje** | Python 3.10+ |
-| **Señas soportadas** | 10 (agua, ayuda, bye, casa, gracias, hola, mama, no, papa, si) |
-| **Dataset** | 1,246 muestras (balance: 108-172 por clase) |
-| **Modelo** | SVM (kernel=rbf, C=10, gamma=scale) |
-| **Accuracy** | 100% (test), 98.59% ± 0.38% (CV 5-fold) |
+| **Señas soportadas** | 13 (agua, ayuda, bye, casa, dedo_medio, gracias, hola, mama, no, papa, paz, si, te_quiero) |
+| **Dataset** | 2,321 muestras (balance: 109-294 por clase) |
+| **Modelo** | Random Forest (n_estimators=200, random_state=42) |
+| **Accuracy** | 99.35% (test), 99.30% ± 0.40% (CV 5-fold) |
 | **FPS** | ~30 FPS (en tiempo real) |
 | **Resolución** | 640×480 px |
 
@@ -65,7 +65,7 @@
 │           ▼          ▼              ▼           ▼           │
 │  ┌──────────────┐  ┌──────────┐  ┌─────────┐  ┌─────────┐  │
 │  │   CAPTURE    │  │PREDICTOR │  │TELEGRAM │  │ ADMIN   │  │
-│  │  (Cámara +   │  │  (SVM +  │  │  (Bot)  │  │ (Config)│  │
+│  │  (Cámara +   │  │  (RF +   │  │  (Bot)  │  │ (Config)│  │
 │  │  MediaPipe)  │  │  Scaler) │  │         │  │         │  │
 │  └──────────────┘  └──────────┘  └─────────┘  └─────────┘  │
 │           │          │                │           │         │
@@ -190,9 +190,8 @@ signs = predictor.get_available_signs()  # ['agua', 'hola', ...]
 
 **Modelo Machine Learning:**
 
-- **Algoritmo:** Support Vector Machine (SVM)
-- **Kernel:** RBF (Radial Basis Function)
-- **Parámetros:** C=10, gamma=scale, probability=True
+- **Algoritmo:** Random Forest
+- **Estimadores:** 200 (n_estimators=200, random_state=42)
 - **Preprocesamiento:** StandardScaler (normalización Z-score)
 - **Codificación de etiquetas:** LabelEncoder
 
@@ -200,10 +199,10 @@ signs = predictor.get_available_signs()  # ['agua', 'hola', ...]
 
 | Métrica | Valor |
 |---|---|
-| Test Accuracy | 100% |
-| CV 5-fold | 98.59% ± 0.38% |
-| Precisión ponderada | 100% |
-| Recall ponderado | 100% |
+| Test Accuracy | 99.35% |
+| CV 5-fold | 99.30% ± 0.40% |
+| Precisión ponderada | 99% |
+| Recall ponderado | 99% |
 
 ---
 
@@ -442,7 +441,7 @@ docker-compose up
     "path": "model/model.pkl",
     "confidence_threshold": 0.75
   },
-  "signs": ["agua", "ayuda", "bye", "casa", "gracias", "hola", "mama", "no", "papa", "si"],
+  "signs": ["agua", "ayuda", "bye", "casa", "dedo_medio", "gracias", "hola", "mama", "no", "papa", "paz", "si", "te_quiero"],
   "camera": {
     "device_id": 0
   },
@@ -480,7 +479,7 @@ IA1_Proyecto2_Grupo3/
 ├── data/                            # Dataset
 │   ├── raw/                         # Imágenes/videos crudos
 │   ├── processed/
-│   │   └── dataset.csv             # 1,246 muestras, 63 features + label
+│   │   └── dataset.csv             # 2,321 muestras, 63 features + label
 │   └── collect_data.py             # Script de recolección
 │
 ├── model/                           # Modelo de ML
@@ -548,10 +547,10 @@ Frame n
 │           - Detecta presencia de mano
 │           - Extrae 21 landmarks (x, y, z)
 ├─ [~1ms]   Normalizar con scaler
-├─ [~2ms]   Predecir con SVM
-│           - Transforma a espacio RBF
-│           - Calcula distancia a hiperplano
-│           - Obtiene probabilidades
+├─ [~2ms]   Predecir con Random Forest
+│           - Agrega votos de 200 árboles
+│           - Calcula probabilidades por clase
+│           - Retorna clase con mayor votos
 ├─ [~5ms]   Dibujar en frame (OpenCV)
 │           - Dibuja conexiones de landmarks
 │           - Dibuja puntos

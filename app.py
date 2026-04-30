@@ -82,6 +82,9 @@ class HandTalkApp:
         
         # Configurar cierre de ventana
         self.window.protocol("WM_DELETE_WINDOW", self.on_closing)
+        
+        # Auto-iniciar cámara al abrir la aplicación
+        self.window.after(500, self.start_camera)
     
     def _create_widgets(self):
         """Crea los widgets de la interfaz."""
@@ -517,6 +520,77 @@ class HandTalkApp:
             command=save_model
         ).pack(fill=tk.X, padx=10, pady=(20, 5))
         
+        # ── Tab de Señas ───────────────────────────────────────────────────
+        signs_frame = ttk.Frame(notebook)
+        notebook.add(signs_frame, text="Señas")
+
+        ttk.Label(signs_frame, text="Clases disponibles en el modelo:", font=("Arial", 10, "bold")).pack(anchor=tk.W, padx=10, pady=(10, 5))
+        ttk.Label(
+            signs_frame,
+            text="Señas que el modelo puede reconocer (entrenadas en el dataset).",
+            font=("Arial", 8, "italic"),
+            foreground="gray"
+        ).pack(anchor=tk.W, padx=10)
+
+        # Listbox con scrollbar para mostrar las clases del modelo
+        list_frame = ttk.Frame(signs_frame)
+        list_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=(5, 5))
+
+        signs_scrollbar = ttk.Scrollbar(list_frame, orient=tk.VERTICAL)
+        signs_listbox = tk.Listbox(
+            list_frame,
+            yscrollcommand=signs_scrollbar.set,
+            font=("Arial", 11),
+            height=10,
+            selectmode=tk.SINGLE,
+            activestyle="dotbox"
+        )
+        signs_scrollbar.config(command=signs_listbox.yview)
+        signs_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        signs_listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+        model_signs = self.predictor.get_available_signs()
+        for i, s in enumerate(model_signs):
+            signs_listbox.insert(tk.END, f"  {i + 1:02d}.  {s}")
+
+        signs_count_label = ttk.Label(
+            signs_frame,
+            text=f"Total de clases: {len(model_signs)}",
+            font=("Arial", 9, "bold"),
+            foreground="blue"
+        )
+        signs_count_label.pack(anchor=tk.W, padx=10, pady=(0, 5))
+
+        ttk.Separator(signs_frame, orient=tk.HORIZONTAL).pack(fill=tk.X, padx=10, pady=5)
+
+        ttk.Label(signs_frame, text="Señas activas en config.json:", font=("Arial", 10, "bold")).pack(anchor=tk.W, padx=10, pady=(5, 3))
+        ttk.Label(
+            signs_frame,
+            text="Puedes agregar o eliminar señas. Usa comas para separar.",
+            font=("Arial", 8, "italic"),
+            foreground="gray"
+        ).pack(anchor=tk.W, padx=10)
+
+        config_signs_text = tk.Text(signs_frame, height=3, width=50, font=("Arial", 10))
+        config_signs_text.insert(tk.END, ", ".join(self.admin.get_available_signs()))
+        config_signs_text.pack(fill=tk.X, padx=10, pady=5)
+
+        def save_signs():
+            raw = config_signs_text.get("1.0", tk.END).strip()
+            new_signs = [s.strip() for s in raw.split(",") if s.strip()]
+            if not new_signs:
+                messagebox.showwarning("Advertencia", "La lista de señas no puede estar vacía.")
+                return
+            self.admin.set_available_signs(new_signs)
+            self._update_signs_display()
+            messagebox.showinfo("Éxito", f"Lista de señas guardada ({len(new_signs)} señas).")
+
+        ttk.Button(
+            signs_frame,
+            text="💾 Guardar señas en config",
+            command=save_signs
+        ).pack(fill=tk.X, padx=10, pady=(5, 10))
+
         # ── Tab de info ────────────────────────────────────────────────────
         info_frame = ttk.Frame(notebook)
         notebook.add(info_frame, text="Información")

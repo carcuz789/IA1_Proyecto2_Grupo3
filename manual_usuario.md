@@ -20,7 +20,7 @@
 
 ## ¿Qué es HandTalk AI?
 
-**HandTalk AI** es una aplicación que detecta señas manuales en tiempo real usando tu cámara web. Puede reconocer 10 señas diferentes:
+**HandTalk AI** es una aplicación que detecta señas manuales en tiempo real usando tu cámara web. Puede reconocer 13 señas diferentes:
 
 - 👋 **hola** — Saludar
 - 👋 **bye** — Despedirse
@@ -32,6 +32,9 @@
 - 🙏 **gracias** — Agradecimiento
 - 🏠 **casa** — Casa
 - 🆘 **ayuda** — Solicitud de ayuda
+- ✌️ **paz** — Paz
+- 🤟 **te_quiero** — Te quiero
+- 🤞 **dedo_medio** — Gesto de dedo medio
 
 La aplicación puede enviar automáticamente la seña detectada a un **bot de Telegram** para comunicarse con otros usuarios.
 
@@ -156,15 +159,15 @@ Se abrirá una ventana como esta:
 
 ## Cómo Usar la Interfaz
 
-### Paso 1: Iniciar la Cámara
+### Paso 1: Verificar que la Cámara Inició
 
-1. Presionar botón **▶ Iniciar**
-2. Se abrirá la cámara web
-3. El video aparecerá en el recuadro izquierdo
-4. Los botones cambiarán de estado:
-   - **▶ Iniciar** → deshabilitado
-   - **⏹ Detener** → habilitado
-   - **📱 Enviar a Telegram** → habilitado
+Al abrir la app, la cámara **inicia automáticamente**. Verificarás que:
+- El video aparece en el recuadro izquierdo
+- El estado muestra **"En ejecución"** (verde)
+- El botón **▶ Iniciar** aparece deshabilitado
+- Los botones **⏹ Detener** y **📱 Enviar** están habilitados
+
+Si necesitas reiniciar la cámara, presiona **⏹ Detener** y luego **▶ Iniciar** manualmente.
 
 ### Paso 2: Mostrar una Seña
 
@@ -334,7 +337,35 @@ BotFather: ¡Listo! Tu token es:
 
 **Umbral:** Confianza mínima para aceptar predicción (0-100%)
 
-### Tab 3: Información
+### Tab 3: Señas
+
+```
+┌─────────────────────────────────┐
+│ SEÑAS                           │
+├─────────────────────────────────┤
+│ Clases disponibles en modelo:   │
+│ ┌─────────────────────────────┐ │
+│ │ 01. agua                     │ │
+│ │ 02. ayuda                    │ │
+│ │ 03. bye                      │ │
+│ │ 04. casa                     │ │
+│ │ 05. dedo_medio               │ │
+│ │ 06. gracias                  │ │
+│ │ 07. hola                     │ │
+│ │ 08. mama  ...                │ │
+│ └─────────────────────────────┘ │
+│ Total de clases: 13             │
+│ ─────────────────────────────── │
+│ Señas activas en config.json:   │
+│ [agua, ayuda, bye...          ] │
+│                                 │
+│ [💾 Guardar señas en config]    │
+└─────────────────────────────────┘
+```
+
+Muestra todas las clases que el modelo puede reconocer y permite editar la lista activa en `config.json`.
+
+### Tab 4: Información
 
 ```
 ┌─────────────────────────────────┐
@@ -386,7 +417,11 @@ BotFather: ¡Listo! Tu token es:
 
 ### P: ¿Puedo añadir más señas?
 
-**R:** Requiere reentrenar el modelo. Contacta al equipo de desarrollo.
+**R:** Sí. El proceso es:
+1. Agregar la seña en `config.json` (sección `"signs"`)
+2. Ejecutar `python3 data/collect_data.py` y capturar muestras
+3. Reentrenar con `python3 model/train.py`
+4. Reiniciar la app
 
 ### P: ¿Los datos se guardan en línea?
 
