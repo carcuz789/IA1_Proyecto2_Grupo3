@@ -1,13 +1,13 @@
 {
   "telegram": {
-    "token": "YOUR_BOT_TOKEN_HERE",
-    "chat_id": "YOUR_CHAT_ID_HERE",
+    "token": "8665444286:AAHdXwCW8GYteRNI8HvW9RdlMwQQogtjVes",
+    "chat_id": "8341434884",
     "enabled": true,
     "message_format": "✋ Seña detectada: {sign} (confianza: {confidence:.1%})"
   },
   "model": {
     "path": "model/model.pkl",
-    "confidence_threshold": 0.17482517482517482
+    "confidence_threshold": 0.06680584551148225
   },
   "signs": [
     "agua",
@@ -26,7 +26,7 @@
     "te_quiero"
   ],
   "camera": {
-    "device_id": 0
+    "device_id": 0.8
   },
   "history_enabled": true
 }

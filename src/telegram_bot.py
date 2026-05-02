@@ -68,19 +68,13 @@ class TelegramBotManager:
                 "Chat ID de Telegram no configurado. "
                 "Configura 'telegram.chat_id' en config.json"
             )
-        
-        self.bot = Bot(token=self.token)
-    
+            
+        # NOTA: Ya no instanciamos self.bot globalmente aquí 
+        # para evitar fugas de memoria y conexiones abiertas.
+
     def send_message_async(self, sign, confidence):
         """
         Envía un mensaje a Telegram de forma asincrónica.
-        
-        Args:
-            sign (str): Nombre de la seña detectada
-            confidence (float): Confianza de la predicción (0-1)
-            
-        Returns:
-            asyncio.Task: Tarea asincrónica del envío
         """
         if not self.enabled:
             return None
@@ -92,40 +86,32 @@ class TelegramBotManager:
         return asyncio.create_task(self._send_message_impl(message))
     
     async def _send_message_impl(self, message):
-        """Implementación asincrónica del envío."""
+        """Implementación asincrónica del envío que cierra su propia conexión."""
         try:
-            await self.bot.send_message(chat_id=self.chat_id, text=message)
-            return True
+            # Usar async with asegura que el pool de conexiones se cierre
+            async with Bot(token=self.token) as bot:
+                await bot.send_message(chat_id=self.chat_id, text=message)
+                return True
         except TelegramError as e:
             print(f"Error enviando mensaje a Telegram: {e}")
             return False
     
     def send_message_sync(self, sign, confidence):
         """
-        Envía un mensaje a Telegram de forma síncrona.
-        
-        Args:
-            sign (str): Nombre de la seña detectada
-            confidence (float): Confianza de la predicción (0-1)
-            
-        Returns:
-            bool: True si se envió correctamente, False en caso contrario
+        Envía un mensaje a Telegram de forma síncrona limpiamente.
         """
         if not self.enabled:
             return False
         
-        # Formatear mensaje
         message = self.message_format.format(sign=sign, confidence=confidence)
         
         try:
-            # Ejecutar en el event loop (compatible con Tkinter)
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
-            result = loop.run_until_complete(
-                self.bot.send_message(chat_id=self.chat_id, text=message)
-            )
+            # Llamamos a _send_message_impl que maneja su propio cierre de bot
+            result = loop.run_until_complete(self._send_message_impl(message))
             loop.close()
-            return True
+            return result
         except Exception as e:
             print(f"Error enviando mensaje a Telegram: {e}")
             return False
@@ -139,12 +125,7 @@ class TelegramBotManager:
         return self.enabled
     
     def set_message_format(self, format_string):
-        """
-        Configura el formato del mensaje.
-        
-        Args:
-            format_string (str): Formato con placeholders {sign} y {confidence}
-        """
+        """Configura el formato del mensaje."""
         self.message_format = format_string
     
     def get_message_format(self):
@@ -154,17 +135,16 @@ class TelegramBotManager:
     def test_connection(self):
         """
         Prueba la conexión con el bot de Telegram.
-        
-        Returns:
-            tuple: (success: bool, message: str)
         """
+        async def _test():
+            # async with cierra la conexión al terminar la prueba
+            async with Bot(token=self.token) as bot:
+                return await bot.get_me()
+
         try:
-            # Ejecutar en event loop
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
-            
-            # Obtener información del bot
-            bot_info = loop.run_until_complete(self.bot.get_me())
+            bot_info = loop.run_until_complete(_test())
             loop.close()
             
             return True, f"Conexión exitosa. Bot: @{bot_info.username}"

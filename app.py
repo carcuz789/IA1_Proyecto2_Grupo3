@@ -520,61 +520,59 @@ class HandTalkApp:
             command=save_model
         ).pack(fill=tk.X, padx=10, pady=(20, 5))
         
-        # ── Tab de Señas ───────────────────────────────────────────────────
-        signs_frame = ttk.Frame(notebook)
-        notebook.add(signs_frame, text="Señas")
-
-        ttk.Label(signs_frame, text="Clases disponibles en el modelo:", font=("Arial", 10, "bold")).pack(anchor=tk.W, padx=10, pady=(10, 5))
-        ttk.Label(
-            signs_frame,
-            text="Señas que el modelo puede reconocer (entrenadas en el dataset).",
-            font=("Arial", 8, "italic"),
-            foreground="gray"
-        ).pack(anchor=tk.W, padx=10)
-
-        # Listbox con scrollbar para mostrar las clases del modelo
-        list_frame = ttk.Frame(signs_frame)
-        list_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=(5, 5))
-
-        signs_scrollbar = ttk.Scrollbar(list_frame, orient=tk.VERTICAL)
-        signs_listbox = tk.Listbox(
-            list_frame,
-            yscrollcommand=signs_scrollbar.set,
-            font=("Arial", 11),
-            height=10,
-            selectmode=tk.SINGLE,
-            activestyle="dotbox"
+        # ── Tab de Información ─────────────────────────────────────────────
+        info_frame = ttk.Frame(notebook)
+        notebook.add(info_frame, text="Información")
+        
+        # Crear frame con scrollbar para permitir scroll
+        canvas = tk.Canvas(info_frame, bg="white", highlightthickness=0)
+        scrollbar = ttk.Scrollbar(info_frame, orient="vertical", command=canvas.yview)
+        scrollable_frame = ttk.Frame(canvas)
+        
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
         )
-        signs_scrollbar.config(command=signs_listbox.yview)
-        signs_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        signs_listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-
+        
+        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+        
+        # ─ Información del Sistema ─
+        ttk.Label(scrollable_frame, text="HandTalk AI — Información del Sistema", 
+                  font=("Arial", 12, "bold")).pack(anchor=tk.W, padx=10, pady=(10, 5))
+        
+        ttk.Label(scrollable_frame, text="Modelo:", font=("Arial", 10, "bold")).pack(anchor=tk.W, padx=10, pady=(5, 3))
+        info_model = f"  • Ruta: {self.admin.get_model_path()}\n  • Algoritmo: SVM (RBF)\n  • Accuracy: 100%"
+        ttk.Label(scrollable_frame, text=info_model).pack(anchor=tk.W, padx=10, pady=(0, 10))
+        
+        ttk.Label(scrollable_frame, text="Cámara:", font=("Arial", 10, "bold")).pack(anchor=tk.W, padx=10, pady=(5, 3))
+        info_camera = f"  • Device ID: {self.admin.get_camera_device_id()}\n  • Resolución: 640x480\n  • FPS: 30"
+        ttk.Label(scrollable_frame, text=info_camera).pack(anchor=tk.W, padx=10, pady=(0, 10))
+        
+        ttk.Label(scrollable_frame, text="Historial:", font=("Arial", 10, "bold")).pack(anchor=tk.W, padx=10, pady=(5, 3))
+        info_history = f"  • Habilitado: {'✓' if self.admin.is_history_enabled() else '✗'}\n  • Mensajes grabados: {len(self.message_history)}"
+        ttk.Label(scrollable_frame, text=info_history).pack(anchor=tk.W, padx=10, pady=(0, 10))
+        
+        # ─ Gestión de Señas (Nueva) ─
+        ttk.Separator(scrollable_frame, orient=tk.HORIZONTAL).pack(fill=tk.X, padx=10, pady=10)
+        
+        ttk.Label(scrollable_frame, text="Gestión de Señas", font=("Arial", 12, "bold")).pack(anchor=tk.W, padx=10, pady=(10, 5))
+        
+        ttk.Label(scrollable_frame, text="Clases disponibles en el modelo:", font=("Arial", 9, "bold")).pack(anchor=tk.W, padx=10, pady=(5, 3))
+        
         model_signs = self.predictor.get_available_signs()
-        for i, s in enumerate(model_signs):
-            signs_listbox.insert(tk.END, f"  {i + 1:02d}.  {s}")
-
-        signs_count_label = ttk.Label(
-            signs_frame,
-            text=f"Total de clases: {len(model_signs)}",
-            font=("Arial", 9, "bold"),
-            foreground="blue"
-        )
-        signs_count_label.pack(anchor=tk.W, padx=10, pady=(0, 5))
-
-        ttk.Separator(signs_frame, orient=tk.HORIZONTAL).pack(fill=tk.X, padx=10, pady=5)
-
-        ttk.Label(signs_frame, text="Señas activas en config.json:", font=("Arial", 10, "bold")).pack(anchor=tk.W, padx=10, pady=(5, 3))
-        ttk.Label(
-            signs_frame,
-            text="Puedes agregar o eliminar señas. Usa comas para separar.",
-            font=("Arial", 8, "italic"),
-            foreground="gray"
-        ).pack(anchor=tk.W, padx=10)
-
-        config_signs_text = tk.Text(signs_frame, height=3, width=50, font=("Arial", 10))
+        signs_text = "  " + ", ".join(model_signs)
+        ttk.Label(scrollable_frame, text=signs_text, wraplength=400, foreground="blue").pack(anchor=tk.W, padx=10, pady=(0, 5))
+        ttk.Label(scrollable_frame, text=f"  Total de clases: {len(model_signs)}", font=("Arial", 9, "italic")).pack(anchor=tk.W, padx=10, pady=(0, 10))
+        
+        ttk.Label(scrollable_frame, text="Señas activas en config.json:", font=("Arial", 9, "bold")).pack(anchor=tk.W, padx=10, pady=(5, 3))
+        ttk.Label(scrollable_frame, text="(Edita para agregar/eliminar. Usa comas para separar)", 
+                  font=("Arial", 8, "italic"), foreground="gray").pack(anchor=tk.W, padx=10)
+        
+        config_signs_text = tk.Text(scrollable_frame, height=3, width=50, font=("Arial", 9))
         config_signs_text.insert(tk.END, ", ".join(self.admin.get_available_signs()))
         config_signs_text.pack(fill=tk.X, padx=10, pady=5)
-
+        
         def save_signs():
             raw = config_signs_text.get("1.0", tk.END).strip()
             new_signs = [s.strip() for s in raw.split(",") if s.strip()]
@@ -584,48 +582,19 @@ class HandTalkApp:
             self.admin.set_available_signs(new_signs)
             self._update_signs_display()
             messagebox.showinfo("Éxito", f"Lista de señas guardada ({len(new_signs)} señas).")
-
-        ttk.Button(
-            signs_frame,
-            text="💾 Guardar señas en config",
-            command=save_signs
-        ).pack(fill=tk.X, padx=10, pady=(5, 10))
-
-        # ── Tab de info ────────────────────────────────────────────────────
-        info_frame = ttk.Frame(notebook)
-        notebook.add(info_frame, text="Información")
         
-        info_text = tk.Text(info_frame, height=20, width=55, state=tk.DISABLED)
-        info_text.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        ttk.Button(scrollable_frame, text="💾 Guardar señas", command=save_signs).pack(fill=tk.X, padx=10, pady=(5, 10))
         
-        info_text.config(state=tk.NORMAL)
-        info_text.delete("1.0", tk.END)
-        info_text.insert(tk.END, f"""
-HandTalk AI — Información del Sistema
-
-Modelo:
-  - Ruta: {self.admin.get_model_path()}
-  - Algoritmo: SVM (RBF)
-  - Accuracy: 100%
-
-Señas disponibles:
-  {', '.join(self.predictor.get_available_signs())}
-
-Cámara:
-  - Device ID: {self.admin.get_camera_device_id()}
-  - Resolución: 640x480
-  - FPS: 30
-
-Historial:
-  - Habilitado: {self.admin.is_history_enabled()}
-  - Mensajes grabados: {len(self.message_history)}
-
-Contacto/Soporte:
-  - GitHub: github.com/carcuz789/IA1_Proyecto2_Grupo3
-  - Versión: 1.0.0
-  - Fecha: 2026-04-20
-        """)
-        info_text.config(state=tk.DISABLED)
+        # ─ Información del Proyecto ─
+        ttk.Separator(scrollable_frame, orient=tk.HORIZONTAL).pack(fill=tk.X, padx=10, pady=10)
+        
+        ttk.Label(scrollable_frame, text="Información del Proyecto", font=("Arial", 10, "bold")).pack(anchor=tk.W, padx=10, pady=(10, 5))
+        project_info = "  • Versión: 1.0.0\n  • Fecha: 2026-05-01\n  • GitHub: github.com/carcuz789/IA1_Proyecto2_Grupo3"
+        ttk.Label(scrollable_frame, text=project_info).pack(anchor=tk.W, padx=10, pady=(0, 10))
+        
+        # Empacar canvas y scrollbar
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
     
     def show_history(self):
         """Muestra el historial de mensajes enviados."""
